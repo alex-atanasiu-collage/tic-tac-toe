@@ -1,0 +1,13 @@
+﻿Build started 12/18/2015 8:30:09 PM.
+     1>Project "D:\Workspace\SFML\Tutorial2\Tutorial1\Tutorial1.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         D:\Software\Visual Studios 2012\VC\bin\CL.exe /c /I"D:\Libraries\SFML-2.3.2\include" /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _WINDOWS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
+         main.cpp
+       Link:
+         D:\Software\Visual Studios 2012\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Workspace\SFML\Tutorial2\Debug\Tutorial1.exe" /INCREMENTAL /NOLOGO /LIBPATH:"D:\Libraries\SFML-2.3.2\lib" "sfml-main-d.lib" "sfml-graphics-d.lib" "sfml-window-d.lib" "sfml-system-d.lib" "sfml-audio-d.lib" "sfml-network-d.lib" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Workspace\SFML\Tutorial2\Debug\Tutorial1.pdb" /SUBSYSTEM:WINDOWS /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Workspace\SFML\Tutorial2\Debug\Tutorial1.lib" /MACHINE:X86 Debug\main.obj
+         Tutorial1.vcxproj -> D:\Workspace\SFML\Tutorial2\Debug\Tutorial1.exe
+     1>Done Building Project "D:\Workspace\SFML\Tutorial2\Tutorial1\Tutorial1.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:02.79
