@@ -7,9 +7,13 @@
 #include "constants.h"
 #include <SFML/Graphics.hpp>
 #include <list>
+#include <Windows.h>
 
 /* current game state */
 GameState current_state;
+
+/* game winner */
+Cell winner;
 
 /* game grid */
 Cell game_matrix[3][3];
@@ -27,7 +31,7 @@ void initialize_game(){
 
 	/* set the current state */
 	current_state = X_TURN_STATE;	
-
+	winner = 0;
 	/* empty the game grid */
 	for(int i = 0; i < 3; i++){
 		for(int j = 0; j < 3; j++){
@@ -84,6 +88,7 @@ bool game_ended(){
 
 	for(config cfg : conf){
 		if(cfg.c1 == cfg.c2 && cfg.c2 == cfg.c3 && cfg.c1 != EMPTY_CELL){
+			winner = cfg.c1;
 			return true;
 		}
 	}
@@ -103,7 +108,7 @@ int main() {
 	sf::VideoMode video_mode(WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_DEPTH);
 
 	/* Window creation */
-    sf::RenderWindow window(video_mode, "TIC TAC TOE");
+    sf::RenderWindow window(video_mode, "TIC TAC TOE", sf::Style::Close);
 	window.setVerticalSyncEnabled(true);
 
 
@@ -178,7 +183,24 @@ int main() {
 
 
         window.display();
+
+		if(current_state == GAME_FINISHED){
+			int res;
+			if(winner == 1){
+				res = MessageBox(NULL, L"Red won!Would you like to play another game?", L"Game ended", MB_YESNO);
+			} else if(winner == 2){
+				res = MessageBox(NULL, L"Blue won!Would you like to play another game?", L"Game ended", MB_YESNO);
+			}
+			if(res == IDYES){
+				initialize_game();
+			} else {
+				window.close();
+			}
+
+		}
     }
+
+	clean_game();
 
     return 0;
 }
