@@ -9,8 +9,14 @@
 #include <list>
 #include <Windows.h>
 
+/* Texturi */
+sf::Texture x_texture, o_texture;
+
 /* current game state */
 GameState current_state;
+
+/* ai player */
+GameState AI_player = 0;
 
 /* game winner */
 Cell winner;
@@ -19,15 +25,21 @@ Cell winner;
 Cell game_matrix[3][3];
 
 /* shapes to be drawn on the screen */
-std::list<sf::CircleShape*> shapes;
+std::list<sf::Sprite*> sprites;
 
 /* function that initializes the game */
 void initialize_game(){
+	if(AI_player == 0){
+		AI_player = 1;
+	} else {
+		AI_player = 3 - AI_player;
+	}
+
 	/* clean the shape list */
-	for(sf::CircleShape* crt : shapes){
+	for(sf::Sprite* crt : sprites){
 		delete crt;
 	}
-	shapes.clear();
+	sprites.clear();
 
 	/* set the current state */
 	current_state = X_TURN_STATE;	
@@ -44,6 +56,10 @@ void initialize_game(){
    it returns true if the move succeeded
    it returns false if the move is illegal */
 bool make_move(unsigned char player, unsigned char x, unsigned char y){
+	if(x < 0 || x >= 3 || y < 0 || y >= 3){
+		return false;
+	}
+
 	/* checks if the move is legal */
 	if(game_matrix[x][y] != EMPTY_CELL){
 		return false;
@@ -51,16 +67,19 @@ bool make_move(unsigned char player, unsigned char x, unsigned char y){
 	
 	/* places move */
 	game_matrix[x][y] = player;
-	sf::CircleShape *shape = new sf::CircleShape(95);
-	shape->setOrigin(95, 95);
-	shape->setPosition(x * (WINDOW_WIDTH / 3) + 105, y * (WINDOW_HEIGHT / 3) + 105);
+
+	sf::Sprite *sprite = NULL;
 	if(player == X_TURN_STATE){
-		shape->setFillColor(sf::Color(255,0,0));	
+		sprite = new sf::Sprite(x_texture);
 	} else {
-		shape->setFillColor(sf::Color(0,0,255));	
+		sprite = new sf::Sprite(o_texture);
 	}
 
-	shapes.push_back(shape);
+	sprite->setOrigin(95, 95);
+	sprite->setPosition((float)(x * (WINDOW_WIDTH / 3) + 105),(float)(y * (WINDOW_HEIGHT / 3) + 105));
+	
+	sprites.push_back(sprite);
+
 	return true;
 }
 
@@ -92,15 +111,130 @@ bool game_ended(){
 			return true;
 		}
 	}
-	return false;	
+
+	for(int i = 0; i < 3; i++){
+		for(int j = 0; j < 3; j++){
+			if(game_matrix[i][j] == EMPTY_CELL){
+				return false;
+			}
+		}
+	}
+
+	winner = 3;
+	return true;	
 }
 
 /* function that cleans the remaining resources */
 void clean_game(){
-	for(sf::CircleShape* crt : shapes){
+	for(sf::Sprite* crt : sprites){
 		delete crt;
 	}
 }
+
+
+
+/***********************************************************************************/
+#define WIN_GAIN 1
+#define DRAW_GAIN 0
+#define LOSE_GAIN -1
+
+unsigned char who_won(Cell crt_matrix[3][3]){
+	std::list<config> conf;
+	conf.push_back(config(crt_matrix[0][0],crt_matrix[0][1],crt_matrix[0][2]));
+	conf.push_back(config(crt_matrix[1][0],crt_matrix[1][1],crt_matrix[1][2]));
+	conf.push_back(config(crt_matrix[2][0],crt_matrix[2][1],crt_matrix[2][2]));
+	conf.push_back(config(crt_matrix[0][0],crt_matrix[1][0],crt_matrix[2][0]));
+	conf.push_back(config(crt_matrix[0][1],crt_matrix[1][1],crt_matrix[2][1]));
+	conf.push_back(config(crt_matrix[0][2],crt_matrix[1][2],crt_matrix[2][2]));
+	conf.push_back(config(crt_matrix[0][0],crt_matrix[1][1],crt_matrix[2][2]));
+	conf.push_back(config(crt_matrix[0][2],crt_matrix[1][1],crt_matrix[2][0]));
+
+	for(config cfg : conf){
+		if(cfg.c1 == cfg.c2 && cfg.c2 == cfg.c3 && cfg.c1 != EMPTY_CELL){
+			return cfg.c1;
+		}
+	}
+
+	for(int i = 0; i < 3; i++){
+		for(int j = 0; j < 3; j++){
+			if(crt_matrix[i][j] == EMPTY_CELL){
+				return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+
+int minmax(unsigned char& x, unsigned char& y, Cell crt_matrix[3][3], GameState crt_player){
+	unsigned char crt_winner = who_won(crt_matrix);
+	if(crt_winner == AI_player){
+		return WIN_GAIN;
+	} else if(crt_winner == 3 - AI_player){
+		return LOSE_GAIN;
+	} else if(crt_winner == 0){
+		return DRAW_GAIN;
+	} 
+
+	int gain = -5;
+	for(int i=0; i < 3; i++){
+		for(int j=0; j < 3; j++){
+			if(crt_matrix[i][j] == EMPTY_CELL){
+				Cell new_matrix[3][3];
+				for(int ii=0; ii < 3; ii++){
+					for(int jj=0; jj < 3; jj++){
+						new_matrix[ii][jj] = crt_matrix[ii][jj];
+					}
+				}
+				new_matrix[i][j] = crt_player;
+				
+				unsigned char bestx = i, besty = j;
+				int crt_gain = minmax(bestx, besty, new_matrix, 3 - crt_player);
+				if(gain < crt_gain){
+					gain = crt_gain;
+					x = bestx;
+					y = besty;
+				}
+
+				if(gain == WIN_GAIN){
+					return WIN_GAIN;
+				}
+			}	
+		}
+	}
+
+	return gain;
+} 
+
+
+void minmax_computer(){
+	unsigned char x = -1, y = -1;	
+	Cell crt_matrix[3][3];
+	for(int i = 0; i < 3; i++){
+		for(int j = 0; j < 3; j++){
+			crt_matrix[i][j] = game_matrix[i][j];
+		}
+	}
+	
+	minmax(x, y, game_matrix, AI_player);
+	if(!make_move(current_state, x, y)){
+		MessageBox(NULL, L"AI Invalid move. Termination iminent.", L"AI error", MB_OK | MB_ICONERROR);
+		exit(1);
+	}
+}
+
+void dumb_computer1(){
+	for(int i = 0; i < 3; i++){
+		for(int j = 0; j < 3; j++){
+			if(make_move(current_state, i, j)){
+				return;
+			}
+		}
+	}
+}
+
+/***********************************************************************************/
 
 /* main function */
 int main() {
@@ -111,26 +245,36 @@ int main() {
     sf::RenderWindow window(video_mode, "TIC TAC TOE", sf::Style::Close);
 	window.setVerticalSyncEnabled(true);
 
+	if(!x_texture.loadFromFile("x_simbol.png")){
+		MessageBox(NULL, L"Could not load game resource! Termination iminent.", L"Resource load error", MB_OK | MB_ICONERROR);
+		return 1;
+	}
+
+	if(!o_texture.loadFromFile("o_simbol.png")){
+		MessageBox(NULL, L"Could not load game resource! Termination iminent.", L"Resource load error", MB_OK | MB_ICONERROR);
+		return 1;	
+	}
+
 
 	/* placement of grid lines */
 	sf::RectangleShape horiz_line1;
 	horiz_line1.setSize(sf::Vector2f(WINDOW_WIDTH,10));
-	horiz_line1.setFillColor(sf::Color(0,0,0));
+	horiz_line1.setFillColor(sf::Color(255,255,255));
 	horiz_line1.setPosition(sf::Vector2f(0, WINDOW_HEIGHT / 3));
 
 	sf::RectangleShape horiz_line2;
 	horiz_line2.setSize(sf::Vector2f(WINDOW_WIDTH,10));
-	horiz_line2.setFillColor(sf::Color(0,0,0));
+	horiz_line2.setFillColor(sf::Color(255,255,255));
 	horiz_line2.setPosition(sf::Vector2f(0, 2 * WINDOW_HEIGHT / 3));
 
 	sf::RectangleShape vert_line1;
 	vert_line1.setSize(sf::Vector2f(10,WINDOW_HEIGHT));
-	vert_line1.setFillColor(sf::Color(0,0,0));
+	vert_line1.setFillColor(sf::Color(255,255,255));
 	vert_line1.setPosition(sf::Vector2f(WINDOW_WIDTH / 3, 0));
 
 	sf::RectangleShape vert_line2;
 	vert_line2.setSize(sf::Vector2f(10,WINDOW_HEIGHT));
-	vert_line2.setFillColor(sf::Color(0,0,0));
+	vert_line2.setFillColor(sf::Color(255,255,255));
 	vert_line2.setPosition(sf::Vector2f(2 * WINDOW_WIDTH / 3, 0));
 
 
@@ -151,24 +295,33 @@ int main() {
         }
 		
 		if(current_state != GAME_FINISHED){
-			if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
-				sf::Vector2i position = sf::Mouse::getPosition(window);
+			if (AI_player == current_state){
+				minmax_computer();
+				if(!game_ended()){
+					current_state = 3 - current_state;
+				} else {
+					current_state = GAME_FINISHED;
+				}
+			} else {
+				if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
+					sf::Vector2i position = sf::Mouse::getPosition(window);
 				
-				int x = position.x / (WINDOW_WIDTH / 3);
-				int y = position.y / (WINDOW_HEIGHT / 3);
+					int x = position.x / (WINDOW_WIDTH / 3);
+					int y = position.y / (WINDOW_HEIGHT / 3);
 
-				if(make_move(current_state, x, y)){
-					if(!game_ended()){
-						current_state = 3 - current_state;
-					} else {
-						current_state = GAME_FINISHED;
+					if(make_move(current_state, x, y)){
+						if(!game_ended()){
+							current_state = 3 - current_state;
+						} else {
+							current_state = GAME_FINISHED;
+						}
 					}
 				}
 			}
 		}
 
 		/* clear screen buffer */
-		window.clear(sf::Color(255,255,255));
+		window.clear(sf::Color(0,0,0));
 
 		/* draw the grid */
 		window.draw(horiz_line1);
@@ -177,19 +330,20 @@ int main() {
 		window.draw(vert_line2);
 
 		/* draw shapes */
-		for(sf::CircleShape* crt : shapes) {
+		for(sf::Sprite* crt : sprites){
 			window.draw(*crt);
-		}        
-
+		}		
 
         window.display();
 
 		if(current_state == GAME_FINISHED){
 			int res;
 			if(winner == 1){
-				res = MessageBox(NULL, L"Red won!Would you like to play another game?", L"Game ended", MB_YESNO);
+				res = MessageBox(NULL, L"X won! Would you like to play another game?", L"Game ended", MB_YESNO);
 			} else if(winner == 2){
-				res = MessageBox(NULL, L"Blue won!Would you like to play another game?", L"Game ended", MB_YESNO);
+				res = MessageBox(NULL, L"O won! Would you like to play another game?", L"Game ended", MB_YESNO);
+			} else if(winner == 3){
+				res = MessageBox(NULL, L"Draw! Would you like to play another game?", L"Game ended", MB_YESNO);	
 			}
 			if(res == IDYES){
 				initialize_game();
